@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot</title>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        margin: 0;
+        background-color: #000;
+        color: #fff;
+        overflow: hidden;
+      }
+
+      .chat-container {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 20px;
+      }
+
+      .logo {
+        width: 180px;
+        height: auto;
+        transition: transform 0.3s ease;
+        filter: grayscale(100%);
+      }
+
+      .logo:hover {
+        transform: scale(1.1);
+      }
+
+      .messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .message {
+        padding: 15px;
+        margin: 5px 0;
+        border-radius: 10px;
+        max-width: 75%;
+        border: 1px solid #fff;
+        background-color: #000;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        word-wrap: break-word;
+      }
+
+      .user {
+        align-self: flex-end;
+        background: #fff;
+        color: #000;
+      }
+
+      .bot {
+        align-self: flex-start;
+      }
+
+      .input-container {
+        display: flex;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 25px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      input {
+        flex: 1;
+        padding: 12px 20px;
+        border: 1px solid #fff;
+        border-radius: 25px 0 0 25px;
+        font-size: 16px;
+        background: #000;
+        color: #fff;
+        outline: none;
+        transition: border-color 0.3s ease;
+      }
+
+      input:focus {
+        border-color: #ccc;
+      }
+
+      button {
+        padding: 12px 25px;
+        margin-left: 0;
+        border: 1px solid #fff;
+        border-radius: 0 25px 25px 0;
+        background: #000;
+        color: #fff;
+        cursor: pointer;
+        font-size: 16px;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        border-color: #ccc;
+      }
+
+      @keyframes dots {
+        0% {
+          content: "Thinking";
+        }
+        25% {
+          content: "Thinking.";
+        }
+        50% {
+          content: "Thinking..";
+        }
+        75% {
+          content: "Thinking...";
+        }
+      }
+
+      .thinking::after {
+        content: "Thinking";
+        animation: dots 1.5s infinite;
+        color: #fff;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .chat-container {
+          padding: 15px;
+        }
+        .message {
+          max-width: 85%;
+        }
+        .logo {
+          width: 120px;
+        }
+        input,
+        button {
+          font-size: 14px;
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="header">
+        <img src="/img/logo_v2-1.png" alt="Logo" class="logo" />
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="input-container">
+        <input
+          type="text"
+          id="userInput"
+          placeholder="Type a message..."
+          onkeypress="handleKeyPress(event)"
+        />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <script>
+      function handleKeyPress(event) {
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+      }
+
+      async function sendMessage() {
+        const input = document.getElementById("userInput");
+        const message = input.value.trim();
+        if (!message) return;
+
+        const messagesDiv = document.getElementById("messages");
+        messagesDiv.innerHTML += `<div class='message user'>${message}</div>`;
+        input.value = "";
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        const thinkingMessage = document.createElement("div");
+        thinkingMessage.className = "message bot thinking";
+        messagesDiv.appendChild(thinkingMessage);
+
+        try {
+          const response = await fetch("http://127.0.0.1:8004/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: "alice.johnson@example.com",
+              question: message,
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          thinkingMessage.remove();
+          messagesDiv.innerHTML += `<div class='message bot'>${
+            data.response || "No response"
+          }</div>`;
+        } catch (error) {
+          thinkingMessage.remove();
+          messagesDiv.innerHTML += `<div class='message bot'>Error: ${error.message}</div>`;
+          console.error("Error in sending message:", error);
+        }
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    </script>
+  </body>
+</html>
