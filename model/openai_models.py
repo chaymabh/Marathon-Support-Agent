@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from the .env file
-load_dotenv("/mnt/h100-volume/Gen_Search_Agent/.env")
+load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 def get_open_ai(temperature=0.1, model='gpt-4o'):

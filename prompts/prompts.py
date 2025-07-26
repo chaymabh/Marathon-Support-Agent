@@ -54,7 +54,6 @@ Format your response strictly as JSON with keys:
 Do not add any explanations or text outside the JSON.
 """
 
-
 planner_guided_json = {
     "type": "object",
     "properties": {
@@ -142,8 +141,6 @@ Only return a short, human-readable paragraph. No formatting. No markdown. No bu
 Current date and time: {datetime}  
 Knowledge base info: {knowledge_base}
 """
-
-
 
 reporter_guided_json = {
     "type": "object",

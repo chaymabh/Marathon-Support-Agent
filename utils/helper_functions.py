@@ -1,7 +1,10 @@
-import os
+
 from datetime import datetime, timezone
-import yaml
 from textwrap import wrap
+import json 
+from decimal import Decimal
+from datetime import date, time, datetime
+
 
 def get_current_utc_datetime():
     now_utc = datetime.now(timezone.utc)
@@ -39,3 +42,14 @@ def custom_print(message, stdscr=None, scroll_pos=0):
         return num_lines
     else:
         print(message)
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, (date, time, datetime)):
+            return obj.isoformat()
+        return super().default(obj)
+    
+def serialize_record(row):
+    record = dict(row._mapping)
+    return json.loads(json.dumps(record, cls=CustomJSONEncoder))

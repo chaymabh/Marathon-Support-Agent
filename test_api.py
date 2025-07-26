@@ -2,7 +2,11 @@ import requests
 from dotenv import load_dotenv
 import os
 
-url = 'http://127.0.0.1:8008/ask' 
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+
+url = 'http://127.0.0.1:8004/ask' 
 question = "i want to know the events that will happen in Munich soon in the following months?"
 payload = {
     "user_id": "john.doe@example.com",
@@ -11,7 +15,7 @@ payload = {
 }
 
 headers = {
-    "X-API-KEY": "c84ff8a4-2241-400a-9f7d-2d30fc61320c"
+    "X-API-KEY": API_KEY
 }
 
 response = requests.post(url, json=payload, headers=headers)

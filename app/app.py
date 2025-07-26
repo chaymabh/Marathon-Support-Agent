@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage
@@ -10,33 +11,51 @@ import asyncio
 import re
 import pytz
 import gc
-from fastapi.middleware.cors import CORSMiddleware  # Add this import
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
 from utils.logger import logger
 from graph.graph import create_graph, compile_workflow
-from app.settings import settings
+
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY not found in .env file")
 
 app = FastAPI()
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000"],  # Adjust this to match your frontend origin
+    allow_origins=["http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-openai_server = settings.openai_server
-openai_model = settings.openai_model
-openai_model_endpoint = settings.openai_model_endpoint
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
-verbose = settings.verbose
+async def verify_api_key(api_key: str = Depends(api_key_header)):
+    if api_key != API_KEY:
+        logger.error(f"Invalid API key provided: {api_key}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return api_key
+
+openai_server = "openai"
+openai_model = 'gpt-4o'
+
+verbose = False
 
 logger = logging.getLogger("myapp")
 logger.setLevel(logging.DEBUG)
 
 if not logger.handlers:
-    file_handler = RotatingFileHandler(settings.log_file, maxBytes=5*1024*1024, backupCount=5)
+    file_handler = RotatingFileHandler("app.log", maxBytes=5*1024*1024, backupCount=5)
     file_handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(formatter)
@@ -46,7 +65,7 @@ call_responce_logger = logging.getLogger("call_responce")
 call_responce_logger.setLevel(logging.DEBUG)
 
 if not call_responce_logger.handlers:
-    call_responce_handler = RotatingFileHandler(settings.call_responce_log_file, maxBytes=5*1024*1024, backupCount=5)
+    call_responce_handler = RotatingFileHandler('call_responce.log', maxBytes=5*1024*1024, backupCount=5)
     call_responce_handler.setLevel(logging.DEBUG)
     call_responce_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     call_responce_handler.setFormatter(call_responce_formatter)
@@ -87,7 +106,6 @@ async def initialize_workflow():
         graph = create_graph(
             server=openai_server,
             model=openai_model,
-            model_endpoint=openai_model_endpoint,
             memory=memory
         )
         workflow = compile_workflow(graph, memory)
@@ -169,7 +187,7 @@ async def startup_event():
     asyncio.create_task(workflow_reinitializer())
 
 @app.post("/ask", status_code=200)
-async def ask_question(request: QuestionRequest):
+async def ask_question(request: QuestionRequest, api_key: str = Depends(verify_api_key)):
     question = request.question
     user_id = request.user_id
 
